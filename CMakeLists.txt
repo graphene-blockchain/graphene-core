@@ -2,7 +2,7 @@
 cmake_minimum_required( VERSION 3.2 FATAL_ERROR )
 project( BitShares LANGUAGES CXX C)
 
-set( BLOCKCHAIN_NAME "BitShares" )
+set( BLOCKCHAIN_NAME "Graphene" )
 
 set( CLI_CLIENT_EXECUTABLE_NAME graphene_client )
 set( GUI_CLIENT_EXECUTABLE_NAME BitShares )
