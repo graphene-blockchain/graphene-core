@@ -81,7 +81,7 @@ In order to run a full node with all the account history you need to remove `par
 
 | Default | Full | Minimal  | ElasticSearch 
 | --- | --- | --- | ---
-| 100G HDD, 16G RAM | 640G SSD, 64G RAM * | 80G HDD, 4G RAM | 500G SSD, 32G RAM
+| 40G HDD, 8G RAM | 80G SSD, 16G RAM * | 40G HDD, 8G RAM | 100G SSD, 16G RAM
 
 \* For this setup, allocate at least 500GB of SSD as swap.
 
