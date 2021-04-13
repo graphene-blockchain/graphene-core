@@ -1,5 +1,5 @@
 FROM phusion/baseimage:0.11
-MAINTAINER The bitshares decentralized organisation
+MAINTAINER The Graphene decentralized organisation
 
 ENV LANG=en_US.UTF-8
 RUN \
@@ -32,8 +32,8 @@ RUN \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ADD . /bitshares-core
-WORKDIR /bitshares-core
+ADD . /graphene-core
+WORKDIR /graphene-core
 
 # Compile
 RUN \
@@ -53,19 +53,19 @@ RUN \
     install -s programs/witness_node/witness_node programs/genesis_util/get_dev_key programs/cli_wallet/cli_wallet /usr/local/bin && \
     #
     # Obtain version
-    mkdir /etc/bitshares && \
-    git rev-parse --short HEAD > /etc/bitshares/version && \
+    mkdir /etc/graphene && \
+    git rev-parse --short HEAD > /etc/graphene/version && \
     cd / && \
-    rm -rf /bitshares-core
+    rm -rf /graphene-core
 
 # Home directory $HOME
 WORKDIR /
-RUN useradd -s /bin/bash -m -d /var/lib/bitshares bitshares
-ENV HOME /var/lib/bitshares
-RUN chown bitshares:bitshares -R /var/lib/bitshares
+RUN useradd -s /bin/bash -m -d /var/lib/graphene graphene
+ENV HOME /var/lib/graphene
+RUN chown graphene:graphene -R /var/lib/graphene
 
 # Volume
-VOLUME ["/var/lib/bitshares", "/etc/bitshares"]
+VOLUME ["/var/lib/graphene", "/etc/graphene"]
 
 # rpc service:
 EXPOSE 8090
@@ -73,12 +73,12 @@ EXPOSE 8090
 EXPOSE 1776
 
 # default exec/config files
-ADD docker/default_config.ini /etc/bitshares/config.ini
-ADD docker/bitsharesentry.sh /usr/local/bin/bitsharesentry.sh
-RUN chmod a+x /usr/local/bin/bitsharesentry.sh
+ADD docker/default_config.ini /etc/graphene/config.ini
+ADD docker/grapheneentry.sh /usr/local/bin/grapheneentry.sh
+RUN chmod a+x /usr/local/bin/grapheneentry.sh
 
 # Make Docker send SIGINT instead of SIGTERM to the daemon
 STOPSIGNAL SIGINT
 
 # default execute entry
-CMD ["/usr/local/bin/bitsharesentry.sh"]
+CMD ["/usr/local/bin/grapheneentry.sh"]
