@@ -39,7 +39,7 @@ We recommend building on Ubuntu 16.04 LTS (64-bit)
 
     git clone https://github.com/graphene-blockchain/graphene-core.git
     cd graphene-core
-    git checkout master # may substitute "master" with current release tag
+    git checkout graphene # may substitute "graphene" with current release tag
     git submodule update --init --recursive
     cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo .
     make
@@ -47,7 +47,7 @@ We recommend building on Ubuntu 16.04 LTS (64-bit)
 **Upgrade Script** (prepend to the Build Script above if you built a prior release):
 
     git remote set-url origin https://github.com/graphene-blockchain/graphene-core.git
-    git checkout master
+    git checkout graphene
     git remote set-head origin --auto
     git pull
     git submodule update --init --recursive # this command may fail
