@@ -1,2 +1,11 @@
 // https://forum.gph.ai/main-graphene/@blockchained/what-next
 "195.201.86.214:4646",          // blckchnd     (GERMANY)
+"78.46.200.101:1666",           // smailer
+"65.21.6.225:1666",             // xanoxt-witness
+"95.216.200.20:4646",           // onotole
+"116.203.0.169:1666",           // alex-pu
+"gph1.lexai.host:1776",         // lex
+"157.90.252.185:1776",          // xchng
+"seed.graphene.fans:1776",      // traders-witness
+"35.205.15.59:1776",            // larik007
+"95.217.238.169:1776",          // x-captain
