@@ -20,7 +20,7 @@ The web wallet is [Graphene UI](https://github.com/graphene-blockchain/graphene-
 
 Visit [gph.ai](https://gph.ai/) to learn about Graphene and join the community at [forum.gph.ai](https://forum.gph.ai/).
 
-Information for developers can be found in the [Graphene Developer Portal](https://developers.gph.ai/). Users interested in how bitshares works can go to the [Graphene Documentation](https://docs.gph.ai/) site.
+Information for developers can be found in the [Graphene Developer Portal](https://developers.gph.ai/). Users interested in how graphene works can go to the [Graphene Documentation](https://docs.gph.ai/) site.
 
 
 Getting Started
