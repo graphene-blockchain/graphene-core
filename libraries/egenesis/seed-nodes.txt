@@ -1,5 +1,5 @@
 // https://forum.gph.ai/main-graphene/@blockchained/what-next
-"195.201.86.214:4646",          // blckchnd     (GERMANY)
+"195.201.86.214:4646",          // blckchnd
 "78.46.200.101:1666",           // smailer
 "65.21.6.225:1666",             // xanoxt-witness
 "95.216.200.20:4646",           // onotole
@@ -9,3 +9,5 @@
 "seed.graphene.fans:1776",      // traders-witness
 "35.205.15.59:1776",            // larik007
 "95.217.238.169:1776",          // x-captain
+"65.108.57.122:1666",           // graphene-lab
+"23.88.107.61:1776",            // pzm.space
