@@ -29,5 +29,6 @@ namespace graphene { namespace utilities {
 extern const char* const git_revision_sha;
 extern const uint32_t git_revision_unix_timestamp;
 extern const char* const git_revision_description;
+extern const char* const graphene_version;
 
 } } // end namespace graphene::utilities

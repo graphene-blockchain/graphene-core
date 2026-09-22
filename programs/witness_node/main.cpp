@@ -47,6 +47,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <websocketpp/version.hpp>
 
+#include <iomanip>
 #include <iostream>
 
 #ifdef WIN32
@@ -114,12 +115,16 @@ int main(int argc, char** argv) {
 
       if( options.count("version") )
       {
-         std::cout << "Version: " << graphene::utilities::git_revision_description << "\n";
-         std::cout << "SHA: " << graphene::utilities::git_revision_sha << "\n";
-         std::cout << "Timestamp: " << fc::get_approximate_relative_time_string(fc::time_point_sec(graphene::utilities::git_revision_unix_timestamp)) << "\n";
-         std::cout << "SSL: " << OPENSSL_VERSION_TEXT << "\n";
-         std::cout << "Boost: " << boost::replace_all_copy(std::string(BOOST_LIB_VERSION), "_", ".") << "\n";
-         std::cout << "Websocket++: " << websocketpp::major_version << "." << websocketpp::minor_version << "." << websocketpp::patch_version << "\n";
+         auto row = []( const char* name, const std::string& value ) {
+            std::cout << std::left << std::setw(13) << name << value << "\n";
+         };
+         row( "Version:", graphene::utilities::graphene_version );
+         row( "Build:", graphene::utilities::git_revision_description );
+         row( "SHA:", graphene::utilities::git_revision_sha );
+         row( "Timestamp:", fc::get_approximate_relative_time_string(fc::time_point_sec(graphene::utilities::git_revision_unix_timestamp)) );
+         row( "SSL:", OPENSSL_VERSION_TEXT );
+         row( "Boost:", boost::replace_all_copy(std::string(BOOST_LIB_VERSION), "_", ".") );
+         row( "Websocket++:", std::to_string(websocketpp::major_version) + "." + std::to_string(websocketpp::minor_version) + "." + std::to_string(websocketpp::patch_version) );
          return 0;
       }
       if( options.count("help") )

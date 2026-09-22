@@ -4,6 +4,9 @@ project( BitShares LANGUAGES CXX C)
 
 set( BLOCKCHAIN_NAME "Graphene" )
 
+# Release version, printed by --version. Bump it together with the graphene-<version> tag.
+set( GRAPHENE_VERSION "1.2.0" )
+
 set( CLI_CLIENT_EXECUTABLE_NAME graphene_client )
 set( GUI_CLIENT_EXECUTABLE_NAME BitShares )
 set( CUSTOM_URL_SCHEME "gcs" )
@@ -264,9 +267,10 @@ add_subdirectory( tests )
 
 if (ENABLE_INSTALLER)
 
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
-set(VERSION_PATCH 0)
+string( REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$" _ "${GRAPHENE_VERSION}" )
+set(VERSION_MAJOR ${CMAKE_MATCH_1})
+set(VERSION_MINOR ${CMAKE_MATCH_2})
+set(VERSION_PATCH ${CMAKE_MATCH_3})
 
 
 include(InstallRequiredSystemLibraries)

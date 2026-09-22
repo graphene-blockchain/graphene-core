@@ -4,11 +4,13 @@
 #define GRAPHENE_GIT_REVISION_SHA "@GRAPHENE_GIT_REVISION_SHA@"
 #define GRAPHENE_GIT_REVISION_UNIX_TIMESTAMP @GRAPHENE_GIT_REVISION_UNIX_TIMESTAMP@
 #define GRAPHENE_GIT_REVISION_DESCRIPTION "@GRAPHENE_GIT_REVISION_DESCRIPTION@"
+#define GRAPHENE_VERSION "@GRAPHENE_VERSION@"
 
 namespace graphene { namespace utilities {
 
 const char* const git_revision_sha = GRAPHENE_GIT_REVISION_SHA;
 const uint32_t git_revision_unix_timestamp = GRAPHENE_GIT_REVISION_UNIX_TIMESTAMP;
 const char* const git_revision_description = GRAPHENE_GIT_REVISION_DESCRIPTION;
+const char* const graphene_version = GRAPHENE_VERSION;
 
 } } // end namespace graphene::utilities
