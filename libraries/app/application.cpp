@@ -122,6 +122,8 @@ void application_impl::reset_p2p_node(const fc::path& data_dir)
    _p2p_network->load_configuration(data_dir / "p2p");
    _p2p_network->set_node_delegate(this);
 
+   // Connections to --seed-node peers are opened once the P2P node is running, see below
+   std::vector<fc::ip::endpoint> seed_node_endpoints;
    if( _options->count("seed-node") )
    {
       auto seeds = _options->at("seed-node").as<vector<string>>();
@@ -133,7 +135,7 @@ void application_impl::reset_p2p_node(const fc::path& data_dir)
             {
                ilog("Adding seed node ${endpoint}", ("endpoint", endpoint));
                _p2p_network->add_node(endpoint);
-               _p2p_network->connect_to_endpoint(endpoint);
+               seed_node_endpoints.push_back(endpoint);
             }
          } catch( const fc::exception& e ) {
             wlog( "caught exception ${e} while adding seed node ${endpoint}",
@@ -194,6 +196,20 @@ void application_impl::reset_p2p_node(const fc::path& data_dir)
    _p2p_network->sync_from(net::item_id(net::core_message_type_enum::block_message_type,
                                         _chain_db->head_block_id()),
                            std::vector<uint32_t>());
+
+   // Until connect_to_p2p_network() starts the connect loop the node rejects every hello as
+   // "not accepting any more incoming connections". A connection opened before that point
+   // could get its hello answer too early, and the peer was then retried only after
+   // GRAPHENE_NET_DEFAULT_PEER_CONNECTION_RETRY_TIME (30 s).
+   for( const fc::ip::endpoint& endpoint : seed_node_endpoints )
+   {
+      try {
+         _p2p_network->connect_to_endpoint(endpoint);
+      } catch( const fc::exception& e ) {
+         wlog( "caught exception ${e} while connecting to seed node ${endpoint}",
+                  ("e", e.to_detail_string())("endpoint", endpoint) );
+      }
+   }
 } FC_CAPTURE_AND_RETHROW() }
 
 std::vector<fc::ip::endpoint> application_impl::resolve_string_to_ip_endpoints(const std::string& endpoint_string)
