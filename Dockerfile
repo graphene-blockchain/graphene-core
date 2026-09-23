@@ -46,7 +46,11 @@ RUN for m in libraries/fc libraries/fc/vendor/editline \
 # Jobs default to the number of CPUs; lower it on small machines, every compiler
 # process of the heavy translation units needs 1.5-2 GB of memory.
 ARG JOBS
+# The ccache directory is a cache mount; CI carries it between runs (see
+# .github/workflows/docker.yml), so a commit rebuilds only what it changed.
+ENV CCACHE_DIR=/root/.cache/ccache CCACHE_MAXSIZE=2G
 RUN --mount=type=cache,target=/root/.cache/ccache \
+    ccache -z && \
     cmake -S /src -B /build \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O3 -g -DNDEBUG" \
@@ -55,6 +59,7 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
       -DCMAKE_LINKER_TYPE=MOLD && \
     cmake --build /build --parallel ${JOBS:-$(nproc)} \
       --target witness_node cli_wallet get_dev_key && \
+    ccache -s && \
     mkdir -p /out/bin /out/debug && \
     for f in programs/witness_node/witness_node programs/cli_wallet/cli_wallet \
              programs/genesis_util/get_dev_key; do \
