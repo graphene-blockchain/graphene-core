@@ -1,92 +1,68 @@
 #!/bin/bash
-GRAPHENED="/usr/local/bin/witness_node"
-
-# For blockchain download
-VERSION=`cat /etc/graphene/version`
-
-## Supported Environmental Variables
 #
-#   * $GRAPHENED_SEED_NODES
-#   * $GRAPHENED_RPC_ENDPOINT
-#   * $GRAPHENED_PLUGINS
-#   * $GRAPHENED_REPLAY
-#   * $GRAPHENED_RESYNC
-#   * $GRAPHENED_P2P_ENDPOINT
-#   * $GRAPHENED_WITNESS_ID
-#   * $GRAPHENED_PRIVATE_KEY
-#   * $GRAPHENED_TRACK_ACCOUNTS
-#   * $GRAPHENED_PARTIAL_OPERATIONS
-#   * $GRAPHENED_MAX_OPS_PER_ACCOUNT
-#   * $GRAPHENED_ES_NODE_URL
-#   * $GRAPHENED_ES_START_AFTER_BLOCK
-#   * $GRAPHENED_TRUSTED_NODE
+# Entry point of the Docker image.
 #
+# With no arguments, or with arguments starting with "-", runs witness_node on the
+# data directory /var/lib/graphene, which should be a mounted volume:
+#
+#     docker run -v graphene-data:/var/lib/graphene IMAGE [witness_node options]
+#
+# Any other first argument is run as a command, e.g. `IMAGE cli_wallet -s ws://...`.
+#
+# Supported environment variables (translated into witness_node options):
+#
+#   GRAPHENED_P2P_ENDPOINT      --p2p-endpoint (default 0.0.0.0:1776)
+#   GRAPHENED_RPC_ENDPOINT      --rpc-endpoint (default 0.0.0.0:8090)
+#   GRAPHENED_SEED_NODES        --seed-node, space-separated list
+#   GRAPHENED_PLUGINS           --plugins, space-separated list
+#   GRAPHENED_WITNESS_ID        --witness-id
+#   GRAPHENED_PRIVATE_KEY       --private-key
+#   GRAPHENED_TRACK_ACCOUNTS    --track-account, space-separated list
+#   GRAPHENED_PARTIAL_OPERATIONS --partial-operations
+#   GRAPHENED_MAX_OPS_PER_ACCOUNT --max-ops-per-account
+#   GRAPHENED_ES_NODE_URL       --elasticsearch-node-url
+#   GRAPHENED_ES_START_AFTER_BLOCK --elasticsearch-start-es-after-block
+#   GRAPHENED_TRUSTED_NODE      --trusted-node
+#   GRAPHENED_REPLAY            --replay-blockchain, if set to anything
+#   GRAPHENED_RESYNC            --resync-blockchain, if set to anything
+#   GRAPHENED_ARGS              extra options, split on whitespace
+#
+# Options given on the command line take precedence over config.ini in the data
+# directory, so the endpoint defaults above apply unless the variables are set.
 
-ARGS=""
-# Translate environmental variables
-if [[ ! -z "$GRAPHENED_SEED_NODES" ]]; then
-    for NODE in $GRAPHENED_SEED_NODES ; do
-        ARGS+=" --seed-node=$NODE"
-    done
-fi
-if [[ ! -z "$GRAPHENED_RPC_ENDPOINT" ]]; then
-    ARGS+=" --rpc-endpoint=${GRAPHENED_RPC_ENDPOINT}"
-fi
+set -e
 
-if [[ ! -z "$GRAPHENED_REPLAY" ]]; then
-    ARGS+=" --replay-blockchain"
-fi
-
-if [[ ! -z "$GRAPHENED_RESYNC" ]]; then
-    ARGS+=" --resync-blockchain"
-fi
-
-if [[ ! -z "$GRAPHENED_P2P_ENDPOINT" ]]; then
-    ARGS+=" --p2p-endpoint=${GRAPHENED_P2P_ENDPOINT}"
-fi
-
-if [[ ! -z "$GRAPHENED_WITNESS_ID" ]]; then
-    ARGS+=" --witness-id=$GRAPHENED_WITNESS_ID"
-fi
-
-if [[ ! -z "$GRAPHENED_PRIVATE_KEY" ]]; then
-    ARGS+=" --private-key=$GRAPHENED_PRIVATE_KEY"
-fi
-
-if [[ ! -z "$GRAPHENED_TRACK_ACCOUNTS" ]]; then
-    for ACCOUNT in $GRAPHENED_TRACK_ACCOUNTS ; do
-        ARGS+=" --track-account=$ACCOUNT"
-    done
+if [[ $# -gt 0 && "$1" != -* ]]; then
+    exec "$@"
 fi
 
-if [[ ! -z "$GRAPHENED_PARTIAL_OPERATIONS" ]]; then
-    ARGS+=" --partial-operations=${GRAPHENED_PARTIAL_OPERATIONS}"
-fi
+DATA_DIR="${GRAPHENED_DATA_DIR:-/var/lib/graphene}"
 
-if [[ ! -z "$GRAPHENED_MAX_OPS_PER_ACCOUNT" ]]; then
-    ARGS+=" --max-ops-per-account=${GRAPHENED_MAX_OPS_PER_ACCOUNT}"
-fi
+ARGS=( --data-dir "$DATA_DIR"
+       --p2p-endpoint "${GRAPHENED_P2P_ENDPOINT:-0.0.0.0:1776}"
+       --rpc-endpoint "${GRAPHENED_RPC_ENDPOINT:-0.0.0.0:8090}" )
 
-if [[ ! -z "$GRAPHENED_ES_NODE_URL" ]]; then
-    ARGS+=" --elasticsearch-node-url=${GRAPHENED_ES_NODE_URL}"
-fi
+for NODE in $GRAPHENED_SEED_NODES; do
+    ARGS+=( --seed-node "$NODE" )
+done
+for ACCOUNT in $GRAPHENED_TRACK_ACCOUNTS; do
+    ARGS+=( --track-account "$ACCOUNT" )
+done
 
-if [[ ! -z "$GRAPHENED_ES_START_AFTER_BLOCK" ]]; then
-    ARGS+=" --elasticsearch-start-es-after-block=${GRAPHENED_ES_START_AFTER_BLOCK}"
-fi
+[[ -n "$GRAPHENED_PLUGINS" ]]             && ARGS+=( --plugins "$GRAPHENED_PLUGINS" )
+[[ -n "$GRAPHENED_WITNESS_ID" ]]          && ARGS+=( --witness-id "$GRAPHENED_WITNESS_ID" )
+[[ -n "$GRAPHENED_PRIVATE_KEY" ]]         && ARGS+=( --private-key "$GRAPHENED_PRIVATE_KEY" )
+[[ -n "$GRAPHENED_PARTIAL_OPERATIONS" ]]  && ARGS+=( --partial-operations "$GRAPHENED_PARTIAL_OPERATIONS" )
+[[ -n "$GRAPHENED_MAX_OPS_PER_ACCOUNT" ]] && ARGS+=( --max-ops-per-account "$GRAPHENED_MAX_OPS_PER_ACCOUNT" )
+[[ -n "$GRAPHENED_ES_NODE_URL" ]]         && ARGS+=( --elasticsearch-node-url "$GRAPHENED_ES_NODE_URL" )
+[[ -n "$GRAPHENED_ES_START_AFTER_BLOCK" ]] && ARGS+=( --elasticsearch-start-es-after-block "$GRAPHENED_ES_START_AFTER_BLOCK" )
+[[ -n "$GRAPHENED_TRUSTED_NODE" ]]        && ARGS+=( --trusted-node "$GRAPHENED_TRUSTED_NODE" )
+[[ -n "$GRAPHENED_REPLAY" ]]              && ARGS+=( --replay-blockchain )
+[[ -n "$GRAPHENED_RESYNC" ]]              && ARGS+=( --resync-blockchain )
 
-if [[ ! -z "$GRAPHENED_TRUSTED_NODE" ]]; then
-    ARGS+=" --trusted-node=${GRAPHENED_TRUSTED_NODE}"
-fi
+# shellcheck disable=SC2206 # GRAPHENED_ARGS is split on whitespace on purpose
+ARGS+=( $GRAPHENED_ARGS )
 
-## Link the graphene config file into home
-## This link has been created in Dockerfile, already
-ln -f -s /etc/graphene/config.ini /var/lib/graphene
-
-# Plugins need to be provided in a space-separated list, which
-# makes it necessary to write it like this
-if [[ ! -z "$GRAPHENED_PLUGINS" ]]; then
-   exec $GRAPHENED --data-dir ${HOME} ${ARGS} ${GRAPHENED_ARGS} --plugins "${GRAPHENED_PLUGINS}"
-else
-   exec $GRAPHENED --data-dir ${HOME} ${ARGS} ${GRAPHENED_ARGS}
-fi
+# exec keeps witness_node as PID 1, so it receives the SIGINT from `docker stop`
+# directly and can flush the object database before exiting.
+exec /usr/local/bin/witness_node "${ARGS[@]}" "$@"

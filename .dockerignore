@@ -1,0 +1,13 @@
+# The build context is the source tree plus .git (the build string needs the commit
+# hash of core and fc, see libraries/utilities/CMakeLists.txt). Everything else that
+# is not source stays out: local build trees alone are hundreds of megabytes.
+build/
+build-*/
+**/CMakeFiles/
+**/CMakeCache.txt
+witness_node_data_dir/
+**/*.wallet
+wallet.json
+Dockerfile
+.dockerignore
+compose.yml

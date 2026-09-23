@@ -64,6 +64,18 @@ may need to diagnose.
 
 Run `make` without targets to build all programs and tests.
 
+**Build with Docker**: the only requirement on the host is Docker 23 or newer; the compiler and all libraries stay
+inside the build. The image is compiled on Ubuntu 26.04 whatever the host system is, and contains the stripped
+`witness_node`, `cli_wallet` and `get_dev_key`.
+
+    git clone --recurse-submodules -b graphene https://github.com/graphene-blockchain/graphene-core.git
+    cd graphene-core
+    docker build -t graphene-core .
+
+Every compiler process needs 1.5-2 GB of memory and the build runs one per CPU; on a machine with little memory add
+`--build-arg JOBS=2`. Running the node from the image, the environment variables of the entry point and the debug
+symbols of the stripped binaries are described in [README-docker.md](README-docker.md).
+
 **Upgrade Script** (run in an existing clone if you built a prior release):
 
     git remote set-url origin https://github.com/graphene-blockchain/graphene-core.git

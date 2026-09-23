@@ -1,84 +1,102 @@
-FROM phusion/baseimage:0.11
-MAINTAINER The Graphene decentralized organisation
+# syntax=docker/dockerfile:1
+#
+# Graphene witness node image.
+#
+#   docker build -t graphene-core .
+#   docker run -d --name graphene --stop-timeout 300 \
+#       -v graphene-data:/var/lib/graphene -p 1776:1776 -p 127.0.0.1:8090:8090 graphene-core
+#
+# The node flushes its object database to disk only on a clean exit. Give it time
+# to do so (--stop-timeout / stop_grace_period, see compose.yml): the default ten
+# seconds of `docker stop` end in SIGKILL and a full replay on the next start.
+#
+# The separate debug symbols of the binaries can be exported with
+#
+#   docker build --target debug-symbols --output type=local,dest=out .
+#
+# They are needed to decode a stack trace from the stripped binaries (addr2line).
 
-ENV LANG=en_US.UTF-8
-RUN \
-    apt-get update -y && \
-    apt-get install -y \
-      g++ \
-      autoconf \
-      cmake \
-      git \
-      libbz2-dev \
-      libcurl4-openssl-dev \
-      libssl-dev \
-      libncurses-dev \
-      libboost-thread-dev \
-      libboost-iostreams-dev \
-      libboost-date-time-dev \
-      libboost-system-dev \
-      libboost-filesystem-dev \
-      libboost-program-options-dev \
-      libboost-chrono-dev \
-      libboost-test-dev \
-      libboost-context-dev \
-      libboost-regex-dev \
-      libboost-coroutine-dev \
-      libtool \
-      doxygen \
-      ca-certificates \
-      fish \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ARG UBUNTU=26.04
 
-ADD . /graphene-core
-WORKDIR /graphene-core
+FROM ubuntu:${UBUNTU} AS builder
 
-# Compile
-RUN \
-    ( git submodule sync --recursive || \
-      find `pwd`  -type f -name .git | \
-	while read f; do \
-	  rel="$(echo "${f#$PWD/}" | sed 's=[^/]*/=../=g')"; \
-	  sed -i "s=: .*/.git/=: $rel/=" "$f"; \
-	done && \
-      git submodule sync --recursive ) && \
-    git submodule update --init --recursive && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-	-DGRAPHENE_DISABLE_UNITY_BUILD=ON \
-        . && \
-    make witness_node cli_wallet get_dev_key && \
-    install -s programs/witness_node/witness_node programs/genesis_util/get_dev_key programs/cli_wallet/cli_wallet /usr/local/bin && \
-    #
-    # Obtain version
-    mkdir /etc/graphene && \
-    git rev-parse --short HEAD > /etc/graphene/version && \
-    cd / && \
-    rm -rf /graphene-core
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential cmake git autoconf automake libtool pkg-config ccache mold \
+      libboost-all-dev libssl-dev libreadline-dev zlib1g-dev libbz2-dev \
+      libcurl4-openssl-dev libzstd-dev libncurses-dev libicu-dev liblzma-dev \
+      ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Home directory $HOME
-WORKDIR /
-RUN useradd -s /bin/bash -m -d /var/lib/graphene graphene
-ENV HOME /var/lib/graphene
-RUN chown graphene:graphene -R /var/lib/graphene
+COPY . /src
+WORKDIR /build
 
-# Volume
-VOLUME ["/var/lib/graphene", "/etc/graphene"]
+# A clone without --recursive (or a source archive from GitHub) lacks the
+# submodules; say so instead of letting cmake fail deep inside fc.
+RUN for m in libraries/fc libraries/fc/vendor/editline \
+             libraries/fc/vendor/secp256k1-zkp libraries/fc/vendor/websocketpp; do \
+      if [ -z "$(ls -A /src/$m 2>/dev/null)" ]; then \
+        echo "ERROR: submodule $m is missing. Clone with --recursive or run" >&2; \
+        echo "       git submodule update --init --recursive" >&2; \
+        exit 1; \
+      fi; \
+    done
 
-# rpc service:
-EXPOSE 8090
-# p2p service:
+# Jobs default to the number of CPUs; lower it on small machines, every compiler
+# process of the heavy translation units needs 1.5-2 GB of memory.
+ARG JOBS
+RUN --mount=type=cache,target=/root/.cache/ccache \
+    cmake -S /src -B /build \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O3 -g -DNDEBUG" \
+      -DCMAKE_C_FLAGS_RELWITHDEBINFO="-O3 -g -DNDEBUG" \
+      -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+      -DCMAKE_LINKER_TYPE=MOLD && \
+    cmake --build /build --parallel ${JOBS:-$(nproc)} \
+      --target witness_node cli_wallet get_dev_key && \
+    mkdir -p /out/bin /out/debug && \
+    for f in programs/witness_node/witness_node programs/cli_wallet/cli_wallet \
+             programs/genesis_util/get_dev_key; do \
+      name=$(basename $f) && \
+      objcopy --only-keep-debug $f /out/debug/$name.debug && \
+      objcopy --strip-all --add-gnu-debuglink=/out/debug/$name.debug $f /out/bin/$name ; \
+    done && \
+    /out/bin/witness_node --version
+
+FROM scratch AS debug-symbols
+COPY --from=builder /out/debug/ /
+
+FROM ubuntu:${UBUNTU}
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libssl3t64 libcurl4t64 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# A fixed uid, so that a host directory mounted as the data directory can be
+# chowned to it in advance: `chown -R 10001:10001 /srv/graphene`.
+RUN groupadd --system --gid 10001 graphene && \
+    useradd --system --uid 10001 --gid graphene --home-dir /var/lib/graphene \
+      --shell /usr/sbin/nologin graphene && \
+    install -d -o graphene -g graphene /var/lib/graphene
+
+COPY --from=builder /out/bin/ /usr/local/bin/
+COPY docker/grapheneentry.sh /usr/local/bin/grapheneentry.sh
+
+USER graphene
+WORKDIR /var/lib/graphene
+ENV HOME=/var/lib/graphene
+
+# No VOLUME: an anonymous volume would outlive `docker rm` as nameless garbage of
+# many gigabytes. Mount the data directory explicitly.
+
+# P2P
 EXPOSE 1776
+# websocket RPC
+EXPOSE 8090
 
-# default exec/config files
-ADD docker/default_config.ini /etc/graphene/config.ini
-ADD docker/grapheneentry.sh /usr/local/bin/grapheneentry.sh
-RUN chmod a+x /usr/local/bin/grapheneentry.sh
-
-# Make Docker send SIGINT instead of SIGTERM to the daemon
+# witness_node exits cleanly on SIGINT
 STOPSIGNAL SIGINT
 
-# default execute entry
-CMD ["/usr/local/bin/grapheneentry.sh"]
+ENTRYPOINT ["/usr/local/bin/grapheneentry.sh"]
