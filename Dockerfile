@@ -79,8 +79,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libssl3t64 libcurl4t64 ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# A fixed uid, so that a host directory mounted as the data directory can be
-# chowned to it in advance: `chown -R 10001:10001 /srv/graphene`.
+# A fixed uid for the node. The container starts as root and the entry point drops
+# to it after fixing up the owner of the data directory and of unreadable mounted
+# files, see docker/grapheneentry.sh.
 RUN groupadd --system --gid 10001 graphene && \
     useradd --system --uid 10001 --gid graphene --home-dir /var/lib/graphene \
       --shell /usr/sbin/nologin graphene && \
@@ -89,7 +90,6 @@ RUN groupadd --system --gid 10001 graphene && \
 COPY --from=builder /out/bin/ /usr/local/bin/
 COPY docker/grapheneentry.sh /usr/local/bin/grapheneentry.sh
 
-USER graphene
 WORKDIR /var/lib/graphene
 ENV HOME=/var/lib/graphene
 

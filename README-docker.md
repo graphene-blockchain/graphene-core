@@ -24,9 +24,15 @@ Things to keep in mind:
   `--stop-timeout 300`.
 * **Data directory.** `/var/lib/graphene` holds the blockchain, `config.ini` and the
   logs. Mount a named volume or a host directory there; the image declares no volume, so
-  without a mount the data is lost with the container. The node runs as uid/gid 10001:
-  a host directory has to be owned by it (`chown -R 10001:10001 /srv/graphene`), a named
-  volume gets the right owner automatically.
+  without a mount the data is lost with the container.
+* **User.** The node runs as uid/gid 10001 (`graphene`). The container starts as root
+  only to fix up permissions and then drops to it: a data directory whose top level
+  belongs to someone else (a fresh host directory) is chowned to 10001, and a file passed
+  to `witness_node` that 10001 cannot read, such as a bind-mounted `api-access.json` with
+  mode 600 owned by root on the host, is copied to `/run/graphene` and the option is
+  pointed to the copy. Started with `--user`, the container does none of this. Commands
+  run with `docker exec` start as root: add `-u graphene`, or files the wallet writes to
+  the data directory end up owned by root.
 * **RPC.** The examples publish the websocket RPC port 8090 on localhost only.
 
 On the first start the node writes a default `config.ini` and `logging.ini` to the data
@@ -40,7 +46,7 @@ Arguments after the image name are passed to `witness_node`:
 An argument that does not start with `-` is run as a command instead, e.g. the wallet
 against a running node:
 
-    docker exec -it graphene cli_wallet -s ws://127.0.0.1:8090
+    docker exec -it -u graphene graphene cli_wallet -s ws://127.0.0.1:8090
     docker run --rm IMAGE get_dev_key <prefix> <seed>
 
 ## Environment variables
