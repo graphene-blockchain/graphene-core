@@ -74,12 +74,16 @@ jobs:
           images: |
             ${{ steps.names.outputs.ghcr }}
             ${{ steps.names.outputs.dockerhub }}
+          # latest=auto would tag every release tag as latest, pre-releases
+          # included; latest comes only from the raw rule below.
+          flavor: |
+            latest=false
           tags: |
             type=match,pattern=graphene-(\d+\.\d+\.\d+(-rc\d+)?)$,group=1
             type=raw,value=latest,enable=${{ env.PUBLISH == 'true' && env.PRERELEASE != 'true' }}
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,format=short
+            type=sha,format=short,enable=${{ env.PUBLISH != 'true' }}
 
       - uses: docker/login-action@v4
         if: env.PUBLISH == 'true'
