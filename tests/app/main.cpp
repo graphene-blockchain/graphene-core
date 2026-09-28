@@ -53,6 +53,21 @@ namespace fc {
    extern std::unordered_map<std::string, appender::ptr> &get_appender_map();
 }
 
+/// Waits until @p condition holds or @p timeout passes; returns whether it holds.
+/// Fixed sleeps made the P2P tests depend on how fast the machine happens to be.
+template< typename Condition >
+static bool wait_for( const Condition& condition, fc::microseconds timeout = fc::seconds(10) )
+{
+   const fc::time_point deadline = fc::time_point::now() + timeout;
+   while( !condition() )
+   {
+      if( fc::time_point::now() >= deadline )
+         return false;
+      fc::usleep( fc::milliseconds(50) );
+   }
+   return true;
+}
+
 BOOST_AUTO_TEST_CASE(load_configuration_options_test_config_logging_files_created)
 {
    fc::temp_directory app_dir(graphene::utilities::temp_directory_path());
@@ -218,6 +233,10 @@ BOOST_AUTO_TEST_CASE( two_node_network )
       BOOST_TEST_MESSAGE( "Creating and initializing app1" );
 
       fc::temp_directory app_dir( graphene::utilities::temp_directory_path() );
+      // One genesis file for both nodes. create_example_genesis() takes the current time rounded
+      // down to the block interval, so two separate calls can fall on either side of a boundary,
+      // give the nodes different chain ids and keep them from connecting.
+      const boost::filesystem::path genesis_file = create_genesis_file( app_dir );
 
       graphene::app::application app1;
       app1.register_plugin< graphene::account_history::account_history_plugin>();
@@ -227,7 +246,7 @@ BOOST_AUTO_TEST_CASE( two_node_network )
       app1.startup_plugins();
       boost::program_options::variables_map cfg;
       cfg.emplace("p2p-endpoint", boost::program_options::variable_value(string("127.0.0.1:3939"), false));
-      cfg.emplace("genesis-json", boost::program_options::variable_value(create_genesis_file(app_dir), false));
+      cfg.emplace("genesis-json", boost::program_options::variable_value(genesis_file, false));
       cfg.emplace("seed-nodes", boost::program_options::variable_value(string("[]"), false));
       app1.initialize(app_dir.path(), cfg);
       BOOST_TEST_MESSAGE( "Starting app1 and waiting 500 ms" );
@@ -245,15 +264,17 @@ BOOST_AUTO_TEST_CASE( two_node_network )
       app2.startup_plugins();
       auto cfg2 = cfg;
       cfg2.erase("p2p-endpoint");
-      cfg2.emplace("p2p-endpoint", boost::program_options::variable_value(string("127.0.0.1:4040"), false));
-      cfg2.emplace("genesis-json", boost::program_options::variable_value(create_genesis_file(app_dir), false));
+      // app2 listens on a random port. The node binds its outbound connections to its own listening
+      // port, and app2 closes first, so a fixed port stayed in TIME_WAIT for a minute after each run
+      // and the next run's app2 kept waiting for it to become available.
+      cfg2.emplace("p2p-endpoint", boost::program_options::variable_value(string("127.0.0.1:0"), false));
       cfg2.emplace("seed-node", boost::program_options::variable_value(vector<string>{"127.0.0.1:3939"}, false));
       cfg2.emplace("seed-nodes", boost::program_options::variable_value(string("[]"), false));
       app2.initialize(app2_dir.path(), cfg2);
 
-      BOOST_TEST_MESSAGE( "Starting app2 and waiting 500 ms" );
+      BOOST_TEST_MESSAGE( "Starting app2 and waiting for the nodes to connect" );
       app2.startup();
-      fc::usleep(fc::milliseconds(500));
+      wait_for( [&app1] { return app1.p2p_node()->get_connection_count() == 1u; } );
 
       BOOST_REQUIRE_EQUAL(app1.p2p_node()->get_connection_count(), 1u);
       BOOST_CHECK_EQUAL(std::string(app1.p2p_node()->get_connected_peers().front().host.get_address()), "127.0.0.1");
@@ -299,9 +320,16 @@ BOOST_AUTO_TEST_CASE( two_node_network )
       BOOST_CHECK_EQUAL( db2->get_balance( GRAPHENE_NULL_ACCOUNT, asset_id_type() ).amount.value, 0 );
 
       BOOST_TEST_MESSAGE( "Broadcasting tx" );
-      app1.p2p_node()->broadcast(graphene::net::trx_message(trx));
-
-      fc::usleep(fc::milliseconds(500));
+      // Right after the handshake app2 may still be syncing with app1, and the node drops new
+      // inventory for a peer that needs sync items from it instead of advertising it later.
+      // Repeat the broadcast until app2 has the transaction; an item is advertised to a peer once.
+      for( int attempt = 0; attempt < 20; ++attempt )
+      {
+         app1.p2p_node()->broadcast(graphene::net::trx_message(trx));
+         if( wait_for( [&db2] { return db2->get_balance( GRAPHENE_NULL_ACCOUNT, asset_id_type() ).amount.value == 1000000; },
+                       fc::milliseconds(500) ) )
+            break;
+      }
 
       BOOST_CHECK_EQUAL( db1->get_balance( GRAPHENE_NULL_ACCOUNT, asset_id_type() ).amount.value, 1000000 );
       BOOST_CHECK_EQUAL( db2->get_balance( GRAPHENE_NULL_ACCOUNT, asset_id_type() ).amount.value, 1000000 );
@@ -318,7 +346,7 @@ BOOST_AUTO_TEST_CASE( two_node_network )
       BOOST_TEST_MESSAGE( "Broadcasting block" );
       app2.p2p_node()->broadcast(graphene::net::block_message( block_1 ));
 
-      fc::usleep(fc::milliseconds(500));
+      wait_for( [&app1] { return app1.chain_database()->head_block_num() == 1u; } );
       BOOST_TEST_MESSAGE( "Verifying nodes are still connected" );
       BOOST_CHECK_EQUAL(app1.p2p_node()->get_connection_count(), 1u);
       BOOST_CHECK_EQUAL(app1.chain_database()->head_block_num(), 1u);

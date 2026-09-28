@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cryptonomex, Inc., and contributors.
+ * Copyright (c) 2026 carbon-witness, and contributors.
  *
  * The MIT License
  *
@@ -21,14 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
-#include <stdint.h>
 
-namespace graphene { namespace utilities {
+#include <graphene/net/peer_database.hpp>
+#include <graphene/utilities/tempdir.hpp>
 
-extern const char* const git_revision_sha;
-extern const uint32_t git_revision_unix_timestamp;
-extern const char* const git_revision_description;
-extern const char* const graphene_version;
+#include <boost/test/unit_test.hpp>
 
-} } // end namespace graphene::utilities
+using namespace graphene::net;
+
+BOOST_AUTO_TEST_SUITE(peer_database_tests)
+
+/**
+ * The P2P node closes its peer database more than once on shutdown. Every close after the
+ * first one must leave the saved file alone instead of overwriting it with an empty list.
+ */
+BOOST_AUTO_TEST_CASE( repeated_close_keeps_saved_peers )
+{
+   fc::temp_directory td( graphene::utilities::temp_directory_path() );
+   const fc::path db_file = td.path() / "p2p" / "peers.json";
+   const fc::ip::endpoint peer = fc::ip::endpoint::from_string( "127.0.0.1:1776" );
+
+   peer_database db;
+   db.open( db_file );
+   db.update_entry( db.lookup_or_create_entry_for_endpoint( peer ) );
+   db.close();
+   db.close();
+
+   peer_database reopened;
+   reopened.open( db_file );
+   BOOST_CHECK_EQUAL( reopened.size(), 1u );
+   BOOST_CHECK( reopened.lookup_entry_for_endpoint( peer ).valid() );
+   reopened.close();
+}
+
+BOOST_AUTO_TEST_SUITE_END()

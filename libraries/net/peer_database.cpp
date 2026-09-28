@@ -60,6 +60,7 @@ namespace graphene { namespace net {
     private:
       potential_peer_set     _potential_peer_set;
       fc::path _peer_database_filename;
+      bool _is_open = false;
 
     public:
       void open(const fc::path& databaseFilename);
@@ -90,6 +91,7 @@ namespace graphene { namespace net {
     void peer_database_impl::open(const fc::path& peer_database_filename)
     {
       _peer_database_filename = peer_database_filename;
+      _is_open = true;
       if (fc::exists(_peer_database_filename))
       {
         try
@@ -114,6 +116,14 @@ namespace graphene { namespace net {
 
     void peer_database_impl::close()
     {
+      // close() empties the in-memory set after saving it, so a second call would overwrite
+      // the file with an empty list. The P2P node is closed more than once on shutdown
+      // (application::shutdown(), then ~application() and ~node_impl()), so only the first
+      // call may write.
+      if (!_is_open)
+        return;
+      _is_open = false;
+
       std::vector<potential_peer_record> peer_records;
       peer_records.reserve(_potential_peer_set.size());
       std::copy(_potential_peer_set.begin(), _potential_peer_set.end(), std::back_inserter(peer_records));
