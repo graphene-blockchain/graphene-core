@@ -49,6 +49,34 @@ against a running node:
     docker exec -it -u graphene graphene cli_wallet -s ws://127.0.0.1:8090
     docker run --rm IMAGE get_dev_key <prefix> <seed>
 
+## Windows (Docker Desktop)
+
+The simplest way is PowerShell: the container then shows up in Docker Desktop and can be managed there.
+
+    docker run -d --name graphene --stop-timeout 300 `
+      -v graphene-data:/var/lib/graphene `
+      -p 1776:1776 -p 127.0.0.1:8090:8090 `
+      grapheneblockchain/graphene-core:latest
+
+The stop timeout is stored with the container, so the Stop button of Docker Desktop also waits up to 5 minutes.
+
+To set the node up in the Docker Desktop window instead:
+
+1. **Volumes → Create**, name `graphene-data`.
+2. **Images → `grapheneblockchain/graphene-core:latest` → Run → Optional settings**:
+   * Container name: `graphene`;
+   * Ports: host port `1776` for container port `1776` (P2P) and, if the RPC is needed, `8090` for `8090`;
+   * Volumes: host path `graphene-data`, container path `/var/lib/graphene`;
+   * Environment variables, optional: e.g. `GRAPHENED_PLUGINS` (see below).
+
+The Run window has no stop timeout setting: its Stop button kills the node after 10 seconds, which may leave the
+database unwritten and force a full replay on the next start. It also publishes the RPC port on all interfaces, not
+only on localhost. Prefer the PowerShell command above for a node that keeps running.
+
+The wallet, from PowerShell:
+
+    docker exec -it -u graphene graphene cli_wallet -s ws://127.0.0.1:8090
+
 ## Environment variables
 
 The entry point translates these variables into `witness_node` options. Options on the
