@@ -1,125 +1,100 @@
-# Docker Container
+# Docker
 
-This repository comes with built-in Dockerfile to support docker
-containers. This README serves as documentation.
+The repository comes with a `Dockerfile` for a witness node image and a `compose.yml`
+to run it.
 
-## Dockerfile Specifications
+## Running a node
 
-The `Dockerfile` performs the following steps:
+    docker compose up -d
+    docker compose logs -f
 
-1. Obtain base image (phusion/baseimage:0.10.1)
-2. Install required dependencies using `apt-get`
-3. Add bitshares-core source code into container
-4. Update git submodules
-5. Perform `cmake` with build type `Release`
-6. Run `make` and `make_install` (this will install binaries into `/usr/local/bin`
-7. Purge source code off the container
-8. Add a local bitshares user and set `$HOME` to `/var/lib/bitshares`
-9. Make `/var/lib/bitshares` and `/etc/bitshares` a docker *volume*
-10. Expose ports `8090` and `1776`
-11. Add default config from `docker/default_config.ini` and entry point script
-12. Run entry point script by default
+or without compose:
 
-The entry point simplifies the use of parameters for the `witness_node`
-(which is run by default when spinning up the container).
+    docker run -d --name graphene --stop-timeout 300 \
+        -v graphene-data:/var/lib/graphene \
+        -p 1776:1776 -p 127.0.0.1:8090:8090 \
+        ghcr.io/graphene-blockchain/graphene-core:latest
 
-### Supported Environmental Variables
+Things to keep in mind:
 
-* `$BITSHARESD_SEED_NODES`
-* `$BITSHARESD_RPC_ENDPOINT`
-* `$BITSHARESD_PLUGINS`
-* `$BITSHARESD_REPLAY`
-* `$BITSHARESD_RESYNC`
-* `$BITSHARESD_P2P_ENDPOINT`
-* `$BITSHARESD_WITNESS_ID`
-* `$BITSHARESD_PRIVATE_KEY`
-* `$BITSHARESD_TRACK_ACCOUNTS`
-* `$BITSHARESD_PARTIAL_OPERATIONS`
-* `$BITSHARESD_MAX_OPS_PER_ACCOUNT`
-* `$BITSHARESD_ES_NODE_URL`
-* `$BITSHARESD_TRUSTED_NODE`
+* **Stop timeout.** The node writes its object database to disk only when it exits
+  cleanly on SIGINT, which takes a while. `docker stop` waits 10 seconds by default and
+  then kills the process; the database is left unusable and the next start replays the
+  whole chain. `compose.yml` sets `stop_grace_period: 5m`, with `docker run` use
+  `--stop-timeout 300`.
+* **Data directory.** `/var/lib/graphene` holds the blockchain, `config.ini` and the
+  logs. Mount a named volume or a host directory there; the image declares no volume, so
+  without a mount the data is lost with the container.
+* **User.** The node runs as uid/gid 10001 (`graphene`). The container starts as root
+  only to fix up permissions and then drops to it: a data directory whose top level
+  belongs to someone else (a fresh host directory) is chowned to 10001, and a file passed
+  to `witness_node` that 10001 cannot read, such as a bind-mounted `api-access.json` with
+  mode 600 owned by root on the host, is copied to `/run/graphene` and the option is
+  pointed to the copy. Started with `--user`, the container does none of this. Commands
+  run with `docker exec` start as root: add `-u graphene`, or files the wallet writes to
+  the data directory end up owned by root.
+* **RPC.** The examples publish the websocket RPC port 8090 on localhost only.
 
-### Default config
+On the first start the node writes a default `config.ini` and `logging.ini` to the data
+directory. Edit them there and restart the container.
 
-The default configuration is:
+Arguments after the image name are passed to `witness_node`:
 
-    p2p-endpoint = 0.0.0.0:9090
-    rpc-endpoint = 0.0.0.0:8090
-    bucket-size = [60,300,900,1800,3600,14400,86400]
-    history-per-size = 1000
-    max-ops-per-account = 1000
-    partial-operations = true
+    docker run --rm IMAGE --version
+    docker run ... IMAGE --replay-blockchain
 
-# Docker Compose
+An argument that does not start with `-` is run as a command instead, e.g. the wallet
+against a running node:
 
-With docker compose, multiple nodes can be managed with a single
-`docker-compose.yaml` file:
+    docker exec -it -u graphene graphene cli_wallet -s ws://127.0.0.1:8090
+    docker run --rm IMAGE get_dev_key <prefix> <seed>
 
-    version: '3'
-    services:
-     main:
-      # Image to run
-      image: bitshares/bitshares-core:latest
-      # 
-      volumes:
-       - ./docker/conf/:/etc/bitshares/
-      # Optional parameters
-      environment:
-       - BITSHARESD_ARGS=--help
+## Environment variables
 
+The entry point translates these variables into `witness_node` options. Options on the
+command line take precedence over `config.ini`.
 
-    version: '3'
-    services:
-     fullnode:
-      # Image to run
-      image: bitshares/bitshares-core:latest
-      environment:
-      # Optional parameters
-      environment:
-       - BITSHARESD_ARGS=--help
-      ports:
-       - "0.0.0.0:8090:8090"
-      volumes:
-      - "bitshares-fullnode:/var/lib/bitshares"
+| variable | option |
+|---|---|
+| `GRAPHENED_P2P_ENDPOINT` | `--p2p-endpoint`, default `0.0.0.0:1776` |
+| `GRAPHENED_RPC_ENDPOINT` | `--rpc-endpoint`, default `0.0.0.0:8090` |
+| `GRAPHENED_SEED_NODES` | `--seed-node`, space-separated list |
+| `GRAPHENED_PLUGINS` | `--plugins`, space-separated list |
+| `GRAPHENED_WITNESS_ID` | `--witness-id` |
+| `GRAPHENED_PRIVATE_KEY` | `--private-key` |
+| `GRAPHENED_TRACK_ACCOUNTS` | `--track-account`, space-separated list |
+| `GRAPHENED_PARTIAL_OPERATIONS` | `--partial-operations` |
+| `GRAPHENED_MAX_OPS_PER_ACCOUNT` | `--max-ops-per-account` |
+| `GRAPHENED_ES_NODE_URL` | `--elasticsearch-node-url` |
+| `GRAPHENED_ES_START_AFTER_BLOCK` | `--elasticsearch-start-es-after-block` |
+| `GRAPHENED_TRUSTED_NODE` | `--trusted-node` |
+| `GRAPHENED_REPLAY` | `--replay-blockchain`, if set |
+| `GRAPHENED_RESYNC` | `--resync-blockchain`, if set |
+| `GRAPHENED_ARGS` | extra options, split on whitespace |
 
+## Building the image
 
-# Docker Hub
+    docker build -t graphene-core .
 
-This container is properly registered with docker hub under the name:
+The build compiles the node inside the image on Ubuntu 26.04, the toolchain the code is
+tested with, and the final image contains only the stripped binaries (`witness_node`,
+`cli_wallet`, `get_dev_key`) and their runtime libraries. Compilation needs 1.5-2 GB of
+memory per job; on a small machine limit the jobs with `--build-arg JOBS=2`.
 
-* [bitshares/bitshares-core](https://hub.docker.com/r/bitshares/bitshares-core/)
+The build context includes `.git`: the version string (`witness_node --version`) carries
+the commit hash. Clone with `--recursive` so that the submodules are present.
 
-Going forward, every release tag as well as all pushes to `develop` and
-`testnet` will be built into ready-to-run containers, there.
+The debug symbols of the binaries are kept in a separate build target. They are needed
+to decode addresses of a stack trace from the stripped binaries with `addr2line`:
 
-# Docker Compose
+    docker build --target debug-symbols --output type=local,dest=debug-symbols .
 
-One can use docker compose to setup a trusted full node together with a
-delayed node like this:
+## Published images
 
-```
-version: '3'
-services:
-
- fullnode:
-  image: bitshares/bitshares-core:latest
-  ports:
-   - "0.0.0.0:8090:8090"
-  volumes:
-  - "bitshares-fullnode:/var/lib/bitshares"
-
- delayed_node:
-  image: bitshares/bitshares-core:latest
-  environment:
-   - 'BITSHARESD_PLUGINS=delayed_node witness'
-   - 'BITSHARESD_TRUSTED_NODE=ws://fullnode:8090'
-  ports:
-   - "0.0.0.0:8091:8090"
-  volumes:
-  - "bitshares-delayed_node:/var/lib/bitshares"
-  links: 
-  - fullnode
-
-volumes:
- bitshares-fullnode:
-```
+The GitHub workflow `.github/workflows/docker.yml` builds the image on every push. A
+release tag `graphene-X.Y.Z` publishes it as `X.Y.Z` and `latest` to
+`ghcr.io/graphene-blockchain/graphene-core` and `grapheneblockchain/graphene-core` on Docker Hub; the debug
+symbols are attached to the GitHub release of the tag as
+`graphene-core-X.Y.Z-debug-symbols-linux-x86_64.tar.xz` (a draft release is created if
+the tag has none yet) and to every workflow run as an artifact. A pre-release tag `graphene-X.Y.Z-rcN`
+is published as `X.Y.Z-rcN` only, without `latest`.

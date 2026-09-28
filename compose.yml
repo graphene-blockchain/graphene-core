@@ -1,0 +1,28 @@
+# Graphene witness node.
+#
+#   docker compose up -d
+#   docker compose logs -f
+#
+# The data directory lives in the named volume graphene-data.
+
+services:
+  witness_node:
+    image: ghcr.io/graphene-blockchain/graphene-core:latest
+    build: .
+    restart: unless-stopped
+    # The object database is written to disk only on a clean exit, which takes
+    # longer than the default 10 s of `docker stop`. A SIGKILL before that leaves
+    # the database unusable and the next start replays the whole chain (hours).
+    stop_grace_period: 5m
+    ports:
+      - "1776:1776"
+      # RPC is reachable from this host only; publish it wider on purpose.
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - graphene-data:/var/lib/graphene
+    # environment:
+    #   GRAPHENED_SEED_NODES: "seed.graphene.fans:1776"
+    #   GRAPHENED_PLUGINS: "witness account_history market_history grouped_orders api_helper_indexes"
+
+volumes:
+  graphene-data:
