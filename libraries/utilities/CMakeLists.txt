@@ -1,21 +1,6 @@
 list( APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/libraries/fc/GitVersionGen" )
 include( GetGitRevisionDescription )
 get_git_head_revision(GIT_REFSPEC GRAPHENE_GIT_REVISION_SHA)
-# get_git_head_revision() reads the ref file itself and returns the ref name instead of the
-# hash once git has packed that ref. It is still needed: it makes CMake re-run when HEAD
-# moves. The hash itself comes from git.
-find_package(Git QUIET)
-if(GIT_FOUND)
-    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse HEAD
-                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                    RESULT_VARIABLE GIT_REV_PARSE_RESULT
-                    OUTPUT_VARIABLE GIT_REV_PARSE_SHA
-                    OUTPUT_STRIP_TRAILING_WHITESPACE
-                    ERROR_QUIET)
-    if(GIT_REV_PARSE_RESULT EQUAL 0)
-        set(GRAPHENE_GIT_REVISION_SHA "${GIT_REV_PARSE_SHA}")
-    endif()
-endif()
 get_git_unix_timestamp(GRAPHENE_GIT_REVISION_UNIX_TIMESTAMP)
 # The build string is the release version plus the abbreviated commit hash, e.g.
 # 1.2.0-19944518. Without git (a source archive) it is the bare version.
