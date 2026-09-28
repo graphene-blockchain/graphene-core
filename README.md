@@ -1,11 +1,7 @@
 Graphene Core
 ==============
 
-[Build Status](https://travis-ci.org/graphene-blockchain/graphene-core/branches):
-
-`master` | `develop` | `hardfork` | `testnet` | `bitshares-fc` 
- --- | --- | --- | --- | ---
- [![](https://travis-ci.org/graphene-blockchain/graphene-core.svg?branch=master)](https://travis-ci.org/graphene-blockchain/graphene-core) | [![](https://travis-ci.org/bitshares/bitshares-core.svg?branch=develop)](https://travis-ci.org/bitshares/bitshares-core) | [![](https://travis-ci.org/bitshares/bitshares-core.svg?branch=hardfork)](https://travis-ci.org/bitshares/bitshares-core) | [![](https://travis-ci.org/bitshares/bitshares-core.svg?branch=testnet)](https://travis-ci.org/bitshares/bitshares-core) | [![](https://travis-ci.org/bitshares/bitshares-fc.svg?branch=master)](https://travis-ci.org/bitshares/bitshares-fc) 
+[![docker](https://github.com/graphene-blockchain/graphene-core/actions/workflows/docker.yml/badge.svg?branch=graphene)](https://github.com/graphene-blockchain/graphene-core/actions/workflows/docker.yml)
 
 
 * [Getting Started](#getting-started)
@@ -20,7 +16,7 @@ The web wallet is [Graphene UI](https://github.com/graphene-blockchain/graphene-
 
 Visit [gph.ai](https://gph.ai/) to learn about Graphene and join the community at [forum.gph.ai](https://forum.gph.ai/).
 
-Information for developers can be found in the [Graphene Developer Portal](https://developers.gph.ai/). Users interested in how bitshares works can go to the [Graphene Documentation](https://docs.gph.ai/) site.
+Information for developers can be found in the [Graphene Developer Portal](https://developers.gph.ai/). Users interested in how graphene works can go to the [Graphene Documentation](https://docs.gph.ai/) site.
 
 
 Getting Started
@@ -163,8 +159,8 @@ After syncing, you can exit the node using Ctrl+C and setup the command-line wal
 
     rpc-endpoint = 127.0.0.1:8090
 
-**IMPORTANT:** By default the witness node will start in reduced memory mode by using some of the commands detailed in [Memory reduction for nodes](https://github.com/bitshares/bitshares-core/wiki/Memory-reduction-for-nodes).
-In order to run a full node with all the account history you need to remove `partial-operations` and `max-ops-per-account` from your config file. Please note that currently(2018-10-17) a full node will need more than 160GB of RAM to operate and required memory is growing fast. Consider the following table as minimal requirements before running a node:
+**IMPORTANT:** By default the witness node will start in reduced memory mode by using some of the commands detailed in [Memory reduction for nodes](https://github.com/bitshares/bitshares-core/wiki/Memory-reduction-for-nodes) (BitShares wiki; applies to Graphene as well).
+In order to run a full node with all the account history you need to remove `partial-operations` and `max-ops-per-account` from your config file. Please note that a full node needs substantially more RAM than the default mode and the required memory grows with the chain. Consider the following table as minimal requirements before running a node:
 
 | Default | Full | Minimal  | ElasticSearch 
 | --- | --- | --- | ---
@@ -188,7 +184,7 @@ To import your initial balance:
 If you send private keys over this connection, `rpc-endpoint` should be bound to localhost for security.
 
 Use `help` to see all available wallet commands. Source definition and listing of all commands is available
-[here](https://github.com/bitshares/bitshares-core/blob/master/libraries/wallet/include/graphene/wallet/wallet.hpp).
+[here](https://github.com/graphene-blockchain/graphene-core/blob/graphene/libraries/wallet/include/graphene/wallet/wallet.hpp).
 
 Support
 -------
@@ -262,11 +258,11 @@ With the above configuration, here is an example of how to call `add_node` from 
 
 Note, the call to `network_node` is necessary to obtain the correct API identifier for the network API.  It is not guaranteed that the network API identifier will always be `2`.
 
-Since the `network_node` API requires login, it is only accessible over the websocket RPC.  Our `doxygen` documentation contains the most up-to-date information
-about API's for the [witness node](https://bitshares.github.io/doxygen/namespacegraphene_1_1app.html) and the
-[wallet](https://bitshares.github.io/doxygen/classgraphene_1_1wallet_1_1wallet__api.html).
+Since the `network_node` API requires login, it is only accessible over the websocket RPC.  The API declarations in the sources are the most up-to-date reference: the
+[witness node API](https://github.com/graphene-blockchain/graphene-core/blob/graphene/libraries/app/include/graphene/app/api.hpp) and the
+[wallet API](https://github.com/graphene-blockchain/graphene-core/blob/graphene/libraries/wallet/include/graphene/wallet/wallet.hpp).
 If you want information which is not available from an API, it might be available
-from the [database](https://bitshares.github.io/doxygen/classgraphene_1_1chain_1_1database.html);
+from the [database](https://github.com/graphene-blockchain/graphene-core/blob/graphene/libraries/chain/include/graphene/chain/database.hpp);
 it is fairly simple to write API methods to expose database methods.
 
 FAQ
@@ -309,7 +305,7 @@ FAQ
 
     The second number specifies the *type*.  The type of the object determines what fields it has.  For a
     complete list of type ID's, see `enum object_type` and `enum impl_object_type` in
-    bitshares/libraries/chain/include/graphene/chain/protocol/types.hpp
+    libraries/protocol/include/graphene/protocol/types.hpp
 
     The third number specifies the *instance*.  The instance of the object is different for each individual
     object.
@@ -322,7 +318,7 @@ FAQ
     do not).
 
     All asset ID's are of the form `1.3.x`.  If you were the 29th asset to be registered,
-    your asset's ID will be `1.3.29`.  Asset `0` is special (it's BTS, which is considered the "core asset").
+    your asset's ID will be `1.3.29`.  Asset `0` is special (it's GPH, which is considered the "core asset").
 
     The first and second number together identify the kind of thing you're talking about (`1.2` for accounts,
     `1.3` for assets).  The third number identifies the particular thing.
