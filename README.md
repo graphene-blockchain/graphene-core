@@ -21,10 +21,10 @@ Information for developers can be found in the [Graphene Developer Portal](https
 
 Getting Started
 ---------------
-The current release is **1.2.0**; see [RELEASE_NOTES_1.2.0.md](RELEASE_NOTES_1.2.0.md) for its bug fixes and the new
-Docker image, and [RELEASE_NOTES_1.1.md](RELEASE_NOTES_1.1.md) for the previous release. Since version 1.1, Graphene
-builds on a current toolchain: Ubuntu 26.04 LTS with GCC 15, CMake 4, Boost 1.90 and OpenSSL 3.5. Version 1.0 built
-only on Ubuntu 18.04–20.04.
+The current release is **1.2.1**; see [RELEASE_NOTES_1.2.1.md](RELEASE_NOTES_1.2.1.md) for the Windows node and app
+and its bug fixes, [RELEASE_NOTES_1.2.0.md](RELEASE_NOTES_1.2.0.md) and [RELEASE_NOTES_1.1.md](RELEASE_NOTES_1.1.md) for the
+previous releases. Since version 1.1, Graphene builds on a current toolchain: Ubuntu 26.04 LTS with GCC 15, CMake 4,
+Boost 1.90 and OpenSSL 3.5. Version 1.0 built only on Ubuntu 18.04–20.04.
 
 There are five ways to get a node, from the quickest to the most flexible:
 
@@ -33,6 +33,11 @@ There are five ways to get a node, from the quickest to the most flexible:
 3. [Docker image built from the Dockerfile](#3-docker-image-built-from-the-dockerfile)
 4. [Compiled from source, debug build](#4-compiled-from-source-debug-build)
 5. [Compiled from source, slim build](#5-compiled-from-source-slim-build)
+
+**On Windows**, the easiest way is the Graphene Node app: download `graphene-node-win64-<version>.zip` from the
+[latest release](https://github.com/graphene-blockchain/graphene-core/releases/latest), unpack it and start
+`graphene-node-gui.exe`. It runs the node, shows how it syncs and stops it cleanly; see
+[README-windows-gui.md](README-windows-gui.md).
 
 The images of options 1-3 run on any system with Docker, compiled on Ubuntu 26.04 inside the image. They contain the
 stripped `witness_node`, `cli_wallet` and `get_dev_key`. Running the node from an image, its environment variables
